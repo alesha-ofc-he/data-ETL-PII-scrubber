@@ -1,0 +1,30 @@
+# Python and local environment
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# Local data, trained models, experiment state and credentials
+/data/
+/artifacts/
+/mlruns/
+/mlflow.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+
+# Local research outputs; notebooks and aggregate reports are tracked
+/research/outputs/
+/reports/private/
+
+# Personal working notes and planning drafts
+/.local/
+
+.DS_Store

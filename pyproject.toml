@@ -1,0 +1,53 @@
+[project]
+name = "retention-lab"
+version = "0.1.0"
+description = "Reproducible churn modeling and experiment research"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=18",
+    "pydantic>=2.10",
+    "scikit-learn>=1.6",
+    "typer>=0.15",
+    "ucimlrepo>=0.0.7",
+]
+
+[project.optional-dependencies]
+research = [
+    "ipykernel>=6.29",
+    "jupyterlab>=4.3",
+    "matplotlib>=3.9",
+    "nbconvert>=7.16",
+    "nbformat>=5.10",
+]
+
+[dependency-groups]
+dev = ["mypy>=1.15", "pandas-stubs>=2.2", "pytest>=8.3", "ruff>=0.9"]
+
+[project.scripts]
+retention-lab = "retention_lab.cli:app"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["retention_lab"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "ucimlrepo"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
