@@ -2,3 +2,6 @@ data_dir = "data"
 seed = 42
 dataset_id = 563
 expected_min_rows = 1000
+tracking_db = "mlflow.db"
+artifact_dir = "mlruns"
+report_dir = "reports"

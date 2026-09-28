@@ -66,3 +66,33 @@ def split_data(
         typer.echo(f"Split failed: {error}", err=True)
         raise typer.Exit(code=1) from error
     typer.echo(json.dumps(plan_summary(plan), indent=2))
+
+
+@app.command("train-baselines")
+def train_baselines(
+    config: Annotated[Path, typer.Option()] = Path("configs/full.toml"),
+) -> None:
+    """Compare fixed candidate models on train CV and validation only."""
+    from retention_lab.runner import run_baselines
+
+    try:
+        results = run_baselines(read_config(config))
+    except (DatasetError, OSError, ValueError) as error:
+        typer.echo(f"Training failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps([result.__dict__ for result in results], indent=2))
+
+
+@app.command("audit-complaints")
+def audit_complaints(
+    config: Annotated[Path, typer.Option()] = Path("configs/full.toml"),
+) -> None:
+    """Measure how strongly the forest depends on the complaints feature."""
+    from retention_lab.runner import run_complaint_ablation
+
+    try:
+        results = run_complaint_ablation(read_config(config))
+    except (DatasetError, OSError, ValueError) as error:
+        typer.echo(f"Complaint audit failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps([result.__dict__ for result in results], indent=2))

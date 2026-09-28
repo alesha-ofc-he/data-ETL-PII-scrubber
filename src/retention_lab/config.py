@@ -13,6 +13,9 @@ class ResearchConfig(BaseModel):
     seed: int = Field(default=42, ge=0, le=2**32 - 1)
     dataset_id: int = Field(default=563, ge=1)
     expected_min_rows: int = Field(default=1000, ge=1)
+    tracking_db: Path = Path("mlflow.db")
+    artifact_dir: Path = Path("mlruns")
+    report_dir: Path = Path("reports")
 
 
 def read_config(path: Path) -> ResearchConfig:
