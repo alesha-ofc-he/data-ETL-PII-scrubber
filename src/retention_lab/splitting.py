@@ -2,6 +2,7 @@
 
 import json
 from hashlib import sha256
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -75,3 +76,13 @@ def plan_summary(plan: pd.DataFrame) -> dict[str, object]:
         for name in SPLIT_NAMES
     }
     return {"split_sha256": digest, "counts": counts}
+
+
+def verify_saved_plan(plan: pd.DataFrame, path: Path) -> None:
+    """Refuse to train when the cached partition differs from the recomputed plan."""
+    if not path.exists():
+        raise DatasetError("Saved split plan missing; run `retention-lab split-data` first")
+    saved = pd.read_parquet(path)
+    for column in ("row_id", "duplicate_group", "fold", "split", TARGET):
+        if column not in saved or not saved[column].equals(plan[column]):
+            raise DatasetError(f"Saved split plan differs in {column}; regenerate and audit it")

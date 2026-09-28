@@ -96,3 +96,34 @@ def audit_complaints(
         typer.echo(f"Complaint audit failed: {error}", err=True)
         raise typer.Exit(code=1) from error
     typer.echo(json.dumps([result.__dict__ for result in results], indent=2))
+
+
+@app.command("audit-features")
+def audit_features(
+    config: Annotated[Path, typer.Option()] = Path("configs/full.toml"),
+    repeats: Annotated[int, typer.Option(min=1, max=100)] = 10,
+) -> None:
+    """Rank original features by held-out permutation AP loss."""
+    from retention_lab.feature_audit import run_permutation_audit
+
+    try:
+        report = run_permutation_audit(read_config(config), repeats=repeats)
+    except (DatasetError, OSError, ValueError) as error:
+        typer.echo(f"Feature audit failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(report.to_json(orient="records", indent=2))
+
+
+@app.command("explain-forest")
+def explain_forest(
+    config: Annotated[Path, typer.Option()] = Path("configs/full.toml"),
+) -> None:
+    """Create checked Tree SHAP explanations for the raw forest candidate."""
+    from retention_lab.shap_audit import run_shap_audit
+
+    try:
+        result = run_shap_audit(read_config(config))
+    except (DatasetError, OSError, ValueError) as error:
+        typer.echo(f"SHAP audit failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps(result, indent=2))

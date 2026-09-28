@@ -13,6 +13,8 @@ uv run retention-lab validate-data --config configs/full.toml
 uv run retention-lab split-data --config configs/full.toml
 uv run retention-lab train-baselines --config configs/full.toml
 uv run retention-lab audit-complaints --config configs/full.toml
+uv run retention-lab audit-features --config configs/full.toml
+uv run retention-lab explain-forest --config configs/full.toml
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -24,6 +26,10 @@ uv run jupyter nbconvert --execute --to notebook --inplace research/01_data_and_
 `train-baselines` обучает каждый вариант на train с одинаковыми тремя folds, затем оценивает его на validation. Calibration и test в этом шаге не используются. Результаты сохраняются в `reports/candidate_comparison.csv` и локальной базе MLflow. PR-AUC показывает качество ранжирования при дисбалансе классов; Brier оценивает вероятности, а precision@10% — насколько точен список клиентов при ограниченном бюджете контактов. При равных оценках риска precision@10% считает ожидаемый результат случайного выбора среди совпадений. Эти показатели не измеряют эффект предложения удержания.
 
 `audit-complaints` сравнивает Random Forest с признаком жалобы и без него. Для честного сравнения обе версии используют одинаковые folds, сгруппированные по признакам без жалобы. Из validation исключаются строки, которые после удаления жалобы становятся дублями train; количество исключений записывается в MLflow. Результат сохраняется в `reports/complaints_ablation.csv`.
+
+`audit-features` обучает Random Forest только на train и десять раз перемешивает каждый исходный признак на validation. Падение PR-AUC сохраняется в `reports/permutation_importance.csv` и MLflow. Это важность для уже обученной модели на этой выборке, а не причинное влияние признака; коррелирующие признаки могут подменять друг друга.
+
+`explain-forest` строит Tree SHAP для вероятности класса «отток» у некалиброванного Random Forest: 64 train-строки задают фоновое распределение, до 100 validation-строк объясняются. Вклады one-hot категорий суммируются обратно в исходный признак; перед сохранением проверяется, что базовая вероятность плюс вклады воспроизводит `predict_proba`. Агрегаты и график находятся в `reports/rf_shap_summary.csv` и `reports/figures/rf_shap_global.png`. Это объяснение текущей лесной модели, а не будущего ансамбля или причинный эффект.
 
 Чтобы открыть локальный интерфейс экспериментов после запуска обучения:
 

@@ -1,9 +1,7 @@
 """Baseline experiment: one split, shared folds, tracked candidate models."""
 
 import json
-import subprocess
 from dataclasses import dataclass
-from pathlib import Path
 from time import perf_counter
 
 import mlflow
@@ -15,8 +13,8 @@ from retention_lab.config import ResearchConfig
 from retention_lab.data import TARGET, DatasetError, load_snapshot, model_features
 from retention_lab.metrics import classification_metrics
 from retention_lab.models import MODEL_NAMES, ModelFactory
-from retention_lab.splitting import make_split_plan, plan_summary
-from retention_lab.tracking import MLflowTracker
+from retention_lab.splitting import make_split_plan, plan_summary, verify_saved_plan
+from retention_lab.tracking import MLflowTracker, git_identity
 
 
 @dataclass(frozen=True)
@@ -31,32 +29,11 @@ class CandidateResult:
     fit_seconds: float
 
 
-def _git_identity() -> tuple[str, bool]:
-    sha = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-    ).stdout.strip()
-    dirty = bool(
-        subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True, check=False
-        ).stdout.strip()
-    )
-    return sha or "unknown", dirty
-
-
-def _verify_saved_plan(plan: pd.DataFrame, path: Path) -> None:
-    if not path.exists():
-        raise DatasetError("Saved split plan missing; run `retention-lab split-data` first")
-    saved = pd.read_parquet(path)
-    for column in ("row_id", "duplicate_group", "fold", "split", TARGET):
-        if column not in saved or not saved[column].equals(plan[column]):
-            raise DatasetError(f"Saved split plan differs in {column}; regenerate and audit it")
-
-
 def run_baselines(config: ResearchConfig) -> list[CandidateResult]:
     """Fit only on train, compare on validation, leave calibration/test untouched."""
     frame, manifest = load_snapshot(config)
     plan = make_split_plan(frame, seed=config.seed)
-    _verify_saved_plan(plan, config.data_dir / "processed" / "split_plan.parquet")
+    verify_saved_plan(plan, config.data_dir / "processed" / "split_plan.parquet")
     train_rows = plan.loc[plan["split"].eq("train"), "row_id"].to_numpy()
     validation_rows = plan.loc[plan["split"].eq("validation"), "row_id"].to_numpy()
     x_train = model_features(frame.iloc[train_rows]).reset_index(drop=True)
@@ -72,7 +49,7 @@ def run_baselines(config: ResearchConfig) -> list[CandidateResult]:
 
     tracker = MLflowTracker(database=config.tracking_db, artifact_dir=config.artifact_dir)
     tracker.configure("retention-offline")
-    git_sha, git_dirty = _git_identity()
+    git_sha, git_dirty = git_identity()
     results: list[CandidateResult] = []
     with mlflow.start_run(run_name="baseline-comparison") as parent:
         mlflow.set_tags(
@@ -146,7 +123,7 @@ def run_complaint_ablation(config: ResearchConfig) -> list[CandidateResult]:
     """Compare one model with/without complaints on leakage-safe shared rows."""
     frame, manifest = load_snapshot(config)
     plan = make_split_plan(frame, seed=config.seed)
-    _verify_saved_plan(plan, config.data_dir / "processed" / "split_plan.parquet")
+    verify_saved_plan(plan, config.data_dir / "processed" / "split_plan.parquet")
     train_rows = plan.loc[plan["split"].eq("train"), "row_id"].to_numpy()
     validation_rows = plan.loc[plan["split"].eq("validation"), "row_id"].to_numpy()
 
@@ -173,7 +150,7 @@ def run_complaint_ablation(config: ResearchConfig) -> list[CandidateResult]:
 
     tracker = MLflowTracker(database=config.tracking_db, artifact_dir=config.artifact_dir)
     tracker.configure("retention-offline")
-    git_sha, git_dirty = _git_identity()
+    git_sha, git_dirty = git_identity()
     results: list[CandidateResult] = []
     with mlflow.start_run(run_name="complaints-ablation"):
         mlflow.set_tags(

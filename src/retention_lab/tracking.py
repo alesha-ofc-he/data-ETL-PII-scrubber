@@ -1,5 +1,6 @@
 """Local MLflow setup for comparable, named experiment runs."""
 
+import subprocess
 from pathlib import Path
 
 import mlflow
@@ -20,3 +21,16 @@ class MLflowTracker:
                 artifact_location=self.artifact_dir.as_uri(),
             )
         mlflow.set_experiment(experiment_name)
+
+
+def git_identity() -> tuple[str, bool]:
+    """Tag experiment runs with their code revision and working-tree state."""
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    ).stdout.strip()
+    dirty = bool(
+        subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=False
+        ).stdout.strip()
+    )
+    return sha or "unknown", dirty
